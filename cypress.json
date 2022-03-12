@@ -1,5 +1,5 @@
 {
-  "baseUrl": "http://localhost:3000",
+  "baseUrl": "http://metareverse-frontend.vercel.app",
   "pluginsFile": false,
   "fixturesFolder": false,
   "supportFile": "cypress/support/index.js",
