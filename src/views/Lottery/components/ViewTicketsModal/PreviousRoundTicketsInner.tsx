@@ -19,9 +19,9 @@ import { fetchLottery } from 'state/lottery/helpers'
 import { getWinningTickets } from 'state/lottery/fetchUnclaimedUserRewards'
 import { fetchUserTicketsForOneRound } from 'state/lottery/getUserTicketsData'
 import { LotteryRound } from 'state/types'
-import { useGetUserLotteryGraphRoundById } from 'state/lottery/hooks'
 import { useTranslation } from 'contexts/Localization'
 import useTheme from 'hooks/useTheme'
+import orderBy from 'lodash/orderBy'
 import WinningNumbers from '../WinningNumbers'
 import { processLotteryResponse } from '../../helpers'
 import TicketNumber from '../TicketNumber'
@@ -64,7 +64,6 @@ const PreviousRoundTicketsInner: React.FC<{ roundId: string }> = ({ roundId }) =
   const { t } = useTranslation()
   const { theme } = useTheme()
   const { account } = useWeb3React()
-  const { totalTickets } = useGetUserLotteryGraphRoundById(roundId)
   const [onPresentClaimModal] = useModal(<ClaimPrizesModal roundsToClaim={[userWinningTickets.claimData]} />, false)
 
   const TooltipComponent = () => (
@@ -101,11 +100,7 @@ const PreviousRoundTicketsInner: React.FC<{ roundId: string }> = ({ roundId }) =
     }
 
     const sortTicketsByWinningBracket = (tickets) => {
-      return tickets.sort((ticketA, ticketB) => {
-        const rewardBracket1 = ticketA.rewardBracket === undefined ? 0 : ticketA.rewardBracket + 1
-        const rewardBracket2 = ticketB.rewardBracket === undefined ? 0 : ticketB.rewardBracket + 1
-        return rewardBracket2 - rewardBracket1
-      })
+      return orderBy(tickets, (ticket) => (ticket.rewardBracket === undefined ? 0 : ticket.rewardBracket + 1), 'desc')
     }
 
     const fetchData = async () => {
@@ -140,7 +135,7 @@ const PreviousRoundTicketsInner: React.FC<{ roundId: string }> = ({ roundId }) =
     }
 
     fetchData()
-  }, [roundId, account, totalTickets])
+  }, [roundId, account])
 
   const getFooter = () => {
     if (userWinningTickets?.ticketsWithUnclaimedRewards?.length > 0) {

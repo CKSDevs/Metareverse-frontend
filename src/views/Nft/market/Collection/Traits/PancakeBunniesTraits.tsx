@@ -5,6 +5,7 @@ import { useRouter } from 'next/router'
 import { formatNumber } from 'utils/formatBalance'
 import { useTranslation } from 'contexts/Localization'
 import CollapsibleCard from 'components/CollapsibleCard'
+import orderBy from 'lodash/orderBy'
 import { useGetCollection } from 'state/nftMarket/hooks'
 import { useGetLowestPriceFromBunnyId } from '../../hooks/useGetLowestPrice'
 import { BNBAmountLabel } from '../../components/CollectibleCard/styles'
@@ -38,7 +39,7 @@ const LowestPriceCell: React.FC<{ bunnyId: string }> = ({ bunnyId }) => {
 const PancakeBunniesTraits: React.FC<PancakeBunniesTraitsProps> = ({ collectionAddress }) => {
   const [raritySort, setRaritySort] = useState<SortType>('asc')
   const collection = useGetCollection(collectionAddress)
-  const totalBunnyCount = Number(collection.totalSupply)
+  const totalBunnyCount = Number(collection?.totalSupply)
   const { t } = useTranslation()
   const { data: distributionData, isFetching: isFetchingDistribution } = useGetCollectionDistributionPB()
   const { push } = useRouter()
@@ -49,11 +50,11 @@ const PancakeBunniesTraits: React.FC<PancakeBunniesTraitsProps> = ({ collectionA
     const distributionKeys: string[] = Object.keys(distributionData)
     const distributionValues: any[] = Object.values(distributionData)
 
-    return distributionValues
-      .map((token, index) => ({ ...token, tokenId: distributionKeys[index] }))
-      .sort((tokenA, tokenB) => {
-        return raritySort === 'asc' ? tokenA.tokenCount - tokenB.tokenCount : tokenB.tokenCount - tokenA.tokenCount
-      })
+    return orderBy(
+      distributionValues.map((token, index) => ({ ...token, tokenId: distributionKeys[index] })),
+      (token) => token.tokenCount,
+      raritySort,
+    )
   }, [raritySort, distributionData])
 
   const toggleRaritySort = () => {

@@ -1,12 +1,13 @@
 import { ChainId, Pair, Token } from '@pancakeswap/sdk'
 import { differenceInDays } from 'date-fns'
 import flatMap from 'lodash/flatMap'
+import farms from 'config/constants/farms'
 import { useCallback, useMemo } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { CHAIN_ID } from 'config/constants/networks'
 import { BASES_TO_TRACK_LIQUIDITY_FOR, PINNED_PAIRS } from 'config/constants'
 import useActiveWeb3React from 'hooks/useActiveWeb3React'
-import { useAllTokens } from 'hooks/Tokens'
+import { useOfficialsAndUserAddedTokens } from 'hooks/Tokens'
 import { AppDispatch, AppState } from '../../index'
 import {
   addSerializedPair,
@@ -38,6 +39,7 @@ import {
   ChartViewMode,
   setChartViewMode,
   setSubgraphHealthIndicatorDisplayed,
+  updateUserLimitOrderAcceptedWarning,
 } from '../actions'
 import { deserializeToken, GAS_PRICE_GWEI, serializeToken } from './helpers'
 
@@ -256,6 +258,24 @@ export function useUserPredictionAcceptedRisk(): [boolean, (acceptedRisk: boolea
   return [userPredictionAcceptedRisk, setUserPredictionAcceptedRisk]
 }
 
+export function useUserLimitOrderAcceptedWarning(): [boolean, (acceptedRisk: boolean) => void] {
+  const dispatch = useDispatch<AppDispatch>()
+  const userLimitOrderAcceptedWarning = useSelector<AppState, AppState['user']['userLimitOrderAcceptedWarning']>(
+    (state) => {
+      return state.user.userLimitOrderAcceptedWarning
+    },
+  )
+
+  const setUserLimitOrderAcceptedWarning = useCallback(
+    (acceptedRisk: boolean) => {
+      dispatch(updateUserLimitOrderAcceptedWarning({ userAcceptedRisk: acceptedRisk }))
+    },
+    [dispatch],
+  )
+
+  return [userLimitOrderAcceptedWarning, setUserLimitOrderAcceptedWarning]
+}
+
 export function useUserPredictionChartDisclaimerShow(): [boolean, (showDisclaimer: boolean) => void] {
   const dispatch = useDispatch<AppDispatch>()
   const userPredictionChartDisclaimerShow = useSelector<
@@ -417,10 +437,18 @@ export function toV2LiquidityToken([tokenA, tokenB]: [Token, Token]): Token {
  */
 export function useTrackedTokenPairs(): [Token, Token][] {
   const { chainId } = useActiveWeb3React()
-  const tokens = useAllTokens(true)
+  const tokens = useOfficialsAndUserAddedTokens()
 
   // pinned pairs
   const pinnedPairs = useMemo(() => (chainId ? PINNED_PAIRS[chainId] ?? [] : []), [chainId])
+
+  const farmPairs: [Token, Token][] = useMemo(
+    () =>
+      farms
+        .filter((farm) => farm.pid !== 0)
+        .map((farm) => [deserializeToken(farm.token), deserializeToken(farm.quoteToken)]),
+    [],
+  )
 
   // pairs for every token against every base
   const generatedPairs: [Token, Token][] = useMemo(
@@ -430,7 +458,7 @@ export function useTrackedTokenPairs(): [Token, Token][] {
             const token = tokens[tokenAddress]
             // for each token on the current chain,
             return (
-              // loop though all bases on the current chain
+              // loop through all bases on the current chain
               (BASES_TO_TRACK_LIQUIDITY_FOR[chainId] ?? [])
                 // to construct pairs of the given token with each base
                 .map((base) => {
@@ -460,8 +488,8 @@ export function useTrackedTokenPairs(): [Token, Token][] {
   }, [savedSerializedPairs, chainId])
 
   const combinedList = useMemo(
-    () => userPairs.concat(generatedPairs).concat(pinnedPairs),
-    [generatedPairs, pinnedPairs, userPairs],
+    () => userPairs.concat(generatedPairs).concat(pinnedPairs).concat(farmPairs),
+    [generatedPairs, pinnedPairs, userPairs, farmPairs],
   )
 
   return useMemo(() => {

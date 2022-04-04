@@ -42,14 +42,26 @@ const farms: SerializedFarmConfig[] = [
    * V3 by order of release (some may be out of PID order due to multiplier boost)
    */
   {
-    pid: 514,
-    lpSymbol: 'GMT-USDC LP',
+    pid: 521,
+    lpSymbol: 'YEL-BNB LP',
     lpAddresses: {
       97: '',
-      56: '0x007EC643C7Cc33a70C083fC305c283dd009C8b94',
+      56: '0x8290d3CA64f712de9FB7220353dAa55bf388F3A3',
     },
-    token: serializedTokens.gmt,
-    quoteToken: serializedTokens.usdc,
+    token: serializedTokens.yel,
+    quoteToken: serializedTokens.wbnb,
+    isCommunity: true,
+  },
+  {
+    pid: 517,
+    lpSymbol: 'TEM-BUSD LP',
+    lpAddresses: {
+      97: '',
+      56: '0x1eDe821DAADe714edADe648F525AdA0C5fE4Ee3A',
+    },
+    token: serializedTokens.tem,
+    quoteToken: serializedTokens.busd,
+    isCommunity: true,
   },
   {
     pid: 386,
@@ -60,6 +72,37 @@ const farms: SerializedFarmConfig[] = [
     },
     token: serializedTokens.hotcross,
     quoteToken: serializedTokens.wbnb,
+    isCommunity: true,
+  },
+  {
+    pid: 520,
+    lpSymbol: 'PEX-BNB LP',
+    lpAddresses: {
+      97: '',
+      56: '0x5ca96E8bDe0Bc587DaC9e02422Fd205b1102DAa4',
+    },
+    token: serializedTokens.pex,
+    quoteToken: serializedTokens.wbnb,
+  },
+  {
+    pid: 519,
+    lpSymbol: 'GMI-BNB LP',
+    lpAddresses: {
+      97: '',
+      56: '0x58d4B61983Ca0aFE6E352e90719F403E24e016F4',
+    },
+    token: serializedTokens.gmi,
+    quoteToken: serializedTokens.wbnb,
+  },
+  {
+    pid: 518,
+    lpSymbol: 'FROYO-CAKE LP',
+    lpAddresses: {
+      97: '',
+      56: '0x1CCc3cC95c8148477Afd18a552f03835Be9D182a',
+    },
+    token: serializedTokens.froyo,
+    quoteToken: serializedTokens.cake,
   },
   {
     pid: 512,
@@ -71,6 +114,36 @@ const farms: SerializedFarmConfig[] = [
     token: serializedTokens.fight,
     quoteToken: serializedTokens.busd,
     isCommunity: true,
+  },
+  {
+    pid: 516,
+    lpSymbol: 'BSW-BNB LP',
+    lpAddresses: {
+      97: '',
+      56: '0x8ca3ff14a52b080c54a6d1a405eeca02959d39fe',
+    },
+    token: serializedTokens.bsw,
+    quoteToken: serializedTokens.wbnb,
+  },
+  {
+    pid: 515,
+    lpSymbol: 'DUET-CAKE LP',
+    lpAddresses: {
+      97: '',
+      56: '0xbDF0aA1D1985Caa357A6aC6661D838DA8691c569',
+    },
+    token: serializedTokens.duet,
+    quoteToken: serializedTokens.cake,
+  },
+  {
+    pid: 514,
+    lpSymbol: 'GMT-USDC LP',
+    lpAddresses: {
+      97: '',
+      56: '0x007EC643C7Cc33a70C083fC305c283dd009C8b94',
+    },
+    token: serializedTokens.gmt,
+    quoteToken: serializedTokens.usdc,
   },
   {
     pid: 498,

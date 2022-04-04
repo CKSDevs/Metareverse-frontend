@@ -20,7 +20,9 @@ import Footer from 'components/Menu/Footer'
 import { useRouter } from 'next/router'
 import { useTranslation } from 'contexts/Localization'
 import { EXCHANGE_DOCS_URLS } from 'config/constants'
-import SwapWarningTokens from 'config/constants/swapWarningTokens'
+import { maxAmountSpend } from 'utils/maxAmountSpend'
+import { computeTradePriceBreakdown, warningSeverity } from 'utils/prices'
+import shouldShowSwapWarning from 'utils/shouldShowSwapWarning'
 import useRefreshBlockNumberID from './hooks/useRefreshBlockNumber'
 import AddressInputPanel from './components/AddressInputPanel'
 import { GreyCard } from '../../components/Card'
@@ -56,8 +58,6 @@ import {
   useUserSingleHopOnly,
   useExchangeChartManager,
 } from '../../state/user/hooks'
-import { maxAmountSpend } from '../../utils/maxAmountSpend'
-import { computeTradePriceBreakdown, warningSeverity } from '../../utils/prices'
 import CircleLoader from '../../components/Loader/CircleLoader'
 import Page from '../Page'
 import SwapWarningModal from './components/SwapWarningModal'
@@ -129,15 +129,31 @@ export default function Swap() {
   // get custom setting values for user
   const [allowedSlippage] = useUserSlippageTolerance()
 
-  // swap state
-  const { independentField, typedValue, recipient } = useSwapState()
-  const { v2Trade, currencyBalances, parsedAmount, currencies, inputError: swapInputError } = useDerivedSwapInfo()
-
-  // Price data
+  // swap state & price data
   const {
+    independentField,
+    typedValue,
+    recipient,
     [Field.INPUT]: { currencyId: inputCurrencyId },
     [Field.OUTPUT]: { currencyId: outputCurrencyId },
   } = useSwapState()
+  const inputCurrency = useCurrency(inputCurrencyId)
+  const outputCurrency = useCurrency(outputCurrencyId)
+  const {
+    v2Trade,
+    currencyBalances,
+    parsedAmount,
+    currencies,
+    inputError: swapInputError,
+  } = useDerivedSwapInfo(
+    independentField,
+    typedValue,
+    inputCurrencyId,
+    inputCurrency,
+    outputCurrencyId,
+    outputCurrency,
+    recipient,
+  )
 
   const {
     wrapType,
@@ -147,7 +163,7 @@ export default function Swap() {
   const showWrap: boolean = wrapType !== WrapType.NOT_APPLICABLE
   const trade = showWrap ? undefined : v2Trade
 
-  const singleTokenPrice = useSingleTokenSwapInfo()
+  const singleTokenPrice = useSingleTokenSwapInfo(inputCurrencyId, inputCurrency, outputCurrencyId, outputCurrency)
 
   const parsedAmounts = showWrap
     ? {
@@ -278,14 +294,6 @@ export default function Swap() {
   const [swapWarningCurrency, setSwapWarningCurrency] = useState(null)
   const [onPresentSwapWarningModal] = useModal(<SwapWarningModal swapCurrency={swapWarningCurrency} />)
 
-  const shouldShowSwapWarning = (swapCurrency) => {
-    const isWarningToken = Object.entries(SwapWarningTokens).find((warningTokenConfig) => {
-      const warningTokenData = warningTokenConfig[1]
-      return swapCurrency.address === warningTokenData.address
-    })
-    return Boolean(isWarningToken)
-  }
-
   useEffect(() => {
     if (swapWarningCurrency) {
       onPresentSwapWarningModal()
@@ -294,12 +302,12 @@ export default function Swap() {
   }, [swapWarningCurrency])
 
   const handleInputSelect = useCallback(
-    (inputCurrency) => {
+    (currencyInput) => {
       setApprovalSubmitted(false) // reset 2 step UI for approvals
-      onCurrencySelection(Field.INPUT, inputCurrency)
-      const showSwapWarning = shouldShowSwapWarning(inputCurrency)
+      onCurrencySelection(Field.INPUT, currencyInput)
+      const showSwapWarning = shouldShowSwapWarning(currencyInput)
       if (showSwapWarning) {
-        setSwapWarningCurrency(inputCurrency)
+        setSwapWarningCurrency(currencyInput)
       } else {
         setSwapWarningCurrency(null)
       }
@@ -314,11 +322,11 @@ export default function Swap() {
   }, [maxAmountInput, onUserInput])
 
   const handleOutputSelect = useCallback(
-    (outputCurrency) => {
-      onCurrencySelection(Field.OUTPUT, outputCurrency)
-      const showSwapWarning = shouldShowSwapWarning(outputCurrency)
+    (currencyOutput) => {
+      onCurrencySelection(Field.OUTPUT, currencyOutput)
+      const showSwapWarning = shouldShowSwapWarning(currencyOutput)
       if (showSwapWarning) {
-        setSwapWarningCurrency(outputCurrency)
+        setSwapWarningCurrency(currencyOutput)
       } else {
         setSwapWarningCurrency(null)
       }

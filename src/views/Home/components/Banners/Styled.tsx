@@ -35,6 +35,9 @@ export const Wrapper = styled.div`
   width: 100%;
   max-height: max-content;
   overflow: visible;
+  ${({ theme }) => theme.mediaQueries.sm} {
+    overflow: visible;
+  }
 `
 
 export const Inner = styled(Flex)`

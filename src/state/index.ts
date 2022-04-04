@@ -114,7 +114,6 @@ export const initializeStore = (preloadedState = undefined) => {
   // Create the store once in the client
   if (!store) {
     store = _store
-    store.dispatch(updateVersion())
   }
 
   return _store
@@ -131,7 +130,9 @@ export const useAppDispatch = () => useDispatch()
 
 export default store
 
-export const persistor = persistStore(store)
+export const persistor = persistStore(store, undefined, () => {
+  store.dispatch(updateVersion())
+})
 
 export function useStore(initialState) {
   return useMemo(() => initializeStore(initialState), [initialState])

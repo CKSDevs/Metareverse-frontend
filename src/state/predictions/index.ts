@@ -46,6 +46,7 @@ import {
   LEADERBOARD_RESULTS_PER_PAGE,
   getPredictionUser,
 } from './helpers'
+import { resetUserState } from '../global/actions'
 
 const initialState: PredictionsState = {
   status: PredictionStatus.INITIAL,
@@ -84,14 +85,7 @@ const initialState: PredictionsState = {
 // Thunks
 type PredictionInitialization = Pick<
   PredictionsState,
-  | 'status'
-  | 'currentEpoch'
-  | 'intervalSeconds'
-  | 'minBetAmount'
-  | 'rounds'
-  | 'ledgers'
-  | 'claimableStatuses'
-  | 'bufferSeconds'
+  'status' | 'currentEpoch' | 'intervalSeconds' | 'minBetAmount' | 'rounds' | 'ledgers' | 'claimableStatuses'
 >
 export const initializePredictions = createAsyncThunk<PredictionInitialization, string>(
   'predictions/initialize',
@@ -377,6 +371,15 @@ export const predictionsSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
+    builder.addCase(resetUserState, (state) => {
+      state.claimableStatuses = {}
+      state.ledgers = {}
+      state.isFetchingHistory = false
+      state.history = []
+      state.hasHistoryLoaded = false
+      state.totalHistory = 0
+      state.currentHistoryPage = 1
+    })
     // Leaderboard filter
     builder.addCase(filterLeaderboard.pending, (state) => {
       // Only mark as loading if we come from Fetched. This allows initialization.
@@ -469,8 +472,7 @@ export const predictionsSlice = createSlice({
 
     // Initialize predictions
     builder.addCase(initializePredictions.fulfilled, (state, action) => {
-      const { status, currentEpoch, intervalSeconds, bufferSeconds, rounds, claimableStatuses, ledgers } =
-        action.payload
+      const { status, currentEpoch, intervalSeconds, rounds, claimableStatuses, ledgers } = action.payload
       const futureRounds: ReduxNodeRound[] = []
       const currentRound = rounds[currentEpoch]
 
@@ -483,7 +485,6 @@ export const predictionsSlice = createSlice({
         status,
         currentEpoch,
         intervalSeconds,
-        bufferSeconds,
         claimableStatuses,
         ledgers,
         rounds: merge({}, rounds, makeRoundData(futureRounds)),

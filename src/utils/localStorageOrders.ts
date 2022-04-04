@@ -1,7 +1,12 @@
 import { Order } from '@gelatonetwork/limit-orders-lib'
 import { get, set, clear } from 'local-storage'
+import orderBy from 'lodash/orderBy'
 
-const LS_ORDERS = 'gorders_'
+export const LS_ORDERS = 'gorders_'
+
+export const hashOrder = (order: Order) => order.id
+
+export const hashOrderSet = (orders: Order[]) => new Set(orders.map(hashOrder))
 
 export function clearOrdersLocalStorage() {
   return clear()
@@ -20,34 +25,47 @@ export function getLSOrders(chainId: number, account: string, pending = false) {
 }
 
 export function saveOrder(chainId: number, account: string, order: Order, pending = false) {
+  saveOrders(chainId, account, [order], pending)
+}
+
+export function saveOrders(chainId: number, account: string, orders: Order[], pending = false) {
+  if (!orders || !orders.length) return
+
   const key = pending ? lsKey(`${LS_ORDERS}pending_`, account, chainId) : lsKey(LS_ORDERS, account, chainId)
 
   if (!pending) {
-    removeOrder(chainId, account, order, true)
+    removeOrders(chainId, account, orders, true)
   }
 
-  const orders = removeOrder(chainId, account, order, pending)
+  const result = removeOrders(chainId, account, orders, pending)
 
-  if (!orders.length) {
-    set(key, [order])
-  } else {
-    orders.push(order)
+  if (!result.length) {
     set(key, orders)
+  } else {
+    result.push(...orders)
+    set(key, result)
   }
 }
 
-export function removeOrder(chainId: number, account: string, order: Order, pending = false) {
+export function removeOrders(chainId: number, account: string, orders: Order[], pending = false) {
   const key = pending ? lsKey(`${LS_ORDERS}pending_`, account, chainId) : lsKey(LS_ORDERS, account, chainId)
 
   const prev = get<Order[]>(key)
 
   if (!prev) return []
 
-  const orders = prev.filter((orderInLS) => orderInLS.id.toLowerCase() !== order.id.toLowerCase())
+  if (!orders || !orders.length) return prev
 
-  set(key, orders)
+  const orderHashSet = hashOrderSet(orders)
+  const result = prev.filter((orderInLS: Order) => !orderHashSet.has(hashOrder(orderInLS)))
 
-  return orders
+  set(key, result)
+
+  return result
+}
+
+export function removeOrder(chainId: number, account: string, order: Order, pending = false) {
+  return removeOrders(chainId, account, [order], pending)
 }
 
 export function confirmOrderCancellation(chainId: number, account: string, cancellationHash: string, success = true) {
@@ -113,9 +131,6 @@ export function confirmOrderSubmission(chainId: number, account: string, submiss
 
 export const getUniqueOrders = (allOrders: Order[]): Order[] => [
   ...new Map(
-    allOrders
-      // sort by `updatedAt` asc so that the most recent one will be used
-      .sort((a, b) => parseFloat(a.updatedAt) - parseFloat(b.updatedAt))
-      .map((order) => [order.id, order]),
+    orderBy(allOrders, (order) => parseFloat(order.updatedAt), 'desc').map((order) => [order.id, order]),
   ).values(),
 ]

@@ -12,14 +12,16 @@ import { Container, CollectionLink } from '../shared/styles'
 
 interface MainPancakeBunnyCardProps {
   cheapestNft: NftToken
-  cheapestNftFromOtherSellers?: NftToken
-  nothingForSaleBunny?: NftToken
+  cheapestNftFromOtherSellers: NftToken
+  isCheapestNftFromOtherSellersFetched: boolean
+  nothingForSaleBunny: NftToken
   onSuccessSale: () => void
 }
 
 const MainPancakeBunnyCard: React.FC<MainPancakeBunnyCardProps> = ({
   cheapestNft,
   cheapestNftFromOtherSellers,
+  isCheapestNftFromOtherSellersFetched,
   nothingForSaleBunny,
   onSuccessSale,
 }) => {
@@ -28,10 +30,10 @@ const MainPancakeBunnyCard: React.FC<MainPancakeBunnyCardProps> = ({
 
   const nftToDisplay = cheapestNftFromOtherSellers || cheapestNft || nothingForSaleBunny
 
-  const onlyOwnNftsOnSale = !cheapestNftFromOtherSellers
+  const onlyOwnNftsOnSale = isCheapestNftFromOtherSellersFetched && !cheapestNftFromOtherSellers
   const hasListings = cheapestNftFromOtherSellers || cheapestNft
 
-  const priceInUsd = multiplyPriceByAmount(bnbBusdPrice, parseFloat(nftToDisplay.marketData?.currentAskPrice))
+  const priceInUsd = multiplyPriceByAmount(bnbBusdPrice, parseFloat(nftToDisplay?.marketData?.currentAskPrice))
   const [onPresentBuyModal] = useModal(<BuyModal nftToBuy={nftToDisplay} />)
   const [onPresentAdjustPriceModal] = useModal(
     <SellModal variant="edit" nftToSell={cheapestNft} onSuccessSale={onSuccessSale} />,
@@ -48,13 +50,7 @@ const MainPancakeBunnyCard: React.FC<MainPancakeBunnyCardProps> = ({
       {t('Adjust Sale Price')}
     </Button>
   ) : (
-    <Button
-      disabled={onlyOwnNftsOnSale}
-      minWidth="168px"
-      width={['100%', null, 'max-content']}
-      mt="24px"
-      onClick={onPresentBuyModal}
-    >
+    <Button minWidth="168px" width={['100%', null, 'max-content']} mt="24px" onClick={onPresentBuyModal}>
       {t('Buy')}
     </Button>
   )
@@ -65,7 +61,7 @@ const MainPancakeBunnyCard: React.FC<MainPancakeBunnyCardProps> = ({
           <Flex flex="2">
             <Box>
               <CollectionLink to={`${nftsBaseUrl}/collections/${nftToDisplay.collectionAddress}`}>
-                {nftToDisplay.collectionName}
+                {nftToDisplay?.collectionName}
               </CollectionLink>
               <Text fontSize="40px" bold mt="12px">
                 {nftToDisplay.name}
@@ -79,7 +75,7 @@ const MainPancakeBunnyCard: React.FC<MainPancakeBunnyCardProps> = ({
                   <Flex alignItems="center" mt="8px">
                     <BinanceIcon width={18} height={18} mr="4px" />
                     <Text fontSize="24px" bold mr="4px">
-                      {formatNumber(parseFloat(nftToDisplay.marketData?.currentAskPrice), 0, 5)}
+                      {formatNumber(parseFloat(nftToDisplay?.marketData?.currentAskPrice), 0, 5)}
                     </Text>
                     {bnbBusdPrice ? (
                       <Text color="textSubtle">{`(~${priceInUsd.toLocaleString(undefined, {

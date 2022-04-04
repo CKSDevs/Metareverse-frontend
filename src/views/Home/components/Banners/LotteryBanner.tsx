@@ -1,17 +1,19 @@
 import { ArrowForwardIcon, Button, Heading, Skeleton, Text, useMatchBreakpoints } from '@pancakeswap/uikit'
+import BigNumber from 'bignumber.js'
 import { NextLinkFromReactRouter } from 'components/NextLink'
-import { LotteryStatus } from 'config/constants/types'
+import { FetchStatus, LotteryStatus } from 'config/constants/types'
 import { useTranslation } from 'contexts/Localization'
 import Image from 'next/image'
 import { memo } from 'react'
 import { usePriceCakeBusd } from 'state/farms/hooks'
-import { useLottery } from 'state/lottery/hooks'
+import { LotteryResponse } from 'state/types'
 import styled from 'styled-components'
+import useSWR from 'swr'
 import { getBalanceNumber } from 'utils/formatBalance'
 import getTimePeriods from 'utils/getTimePeriods'
 import Timer from 'views/Lottery/components/Countdown/Timer'
 import useGetNextLotteryEvent from 'views/Lottery/hooks/useGetNextLotteryEvent'
-import useNextEventCountdown from 'views/Lottery/hooks/useNextEventCountdown'
+import useNextEventCountdown from './hooks/useNextEventCountdown'
 import { lotteryImage, lotteryMobileImage } from './images'
 import * as S from './Styled'
 
@@ -20,6 +22,15 @@ const RightWrapper = styled.div`
   right: 0;
   bottom: -8px;
   ${({ theme }) => theme.mediaQueries.sm} {
+    right: 1px;
+    bottom: 1px;
+  }
+  ${({ theme }) => theme.mediaQueries.md} {
+    right: 0px;
+    bottom: 8px;
+  }
+  ${({ theme }) => theme.mediaQueries.lg} {
+    right: 0px;
     bottom: -5px;
   }
 `
@@ -48,23 +59,24 @@ export const StyledSubheading = styled(Heading)`
   }
   margin-bottom: 8px;
 `
+const isLotteryLive = (status: LotteryStatus) => status === LotteryStatus.OPEN
 
 const LotteryPrice: React.FC = () => {
-  const {
-    currentRound: { amountCollectedInCake, status },
-  } = useLottery()
+  const { data } = useSWR<LotteryResponse>(['currentLottery'])
   const cakePriceBusd = usePriceCakeBusd()
-  const prizeInBusd = amountCollectedInCake.times(cakePriceBusd)
+  const prizeInBusd = new BigNumber(data.amountCollectedInCake).times(cakePriceBusd)
   const prizeTotal = getBalanceNumber(prizeInBusd)
   const { t } = useTranslation()
 
-  if (status === LotteryStatus.OPEN) {
+  if (isLotteryLive(data.status)) {
     return (
       <>
         {prizeInBusd.isNaN() ? (
           <Skeleton height={20} width={90} display="inline-block" />
         ) : (
-          t('Win $ %prize% in Lottery', { prize: prizeTotal.toFixed(0) })
+          t('Win $%prize% in Lottery', {
+            prize: prizeTotal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
+          })
         )}
       </>
     )
@@ -73,33 +85,44 @@ const LotteryPrice: React.FC = () => {
 }
 
 const LotteryCountDownTimer = () => {
-  const {
-    currentRound: { status, endTime },
-  } = useLottery()
-  const endTimeAsInt = parseInt(endTime, 10)
-  const { nextEventTime } = useGetNextLotteryEvent(endTimeAsInt, status)
+  const { data } = useSWR<LotteryResponse>(['currentLottery'])
+  const endTimeAsInt = parseInt(data.endTime, 10)
+  const { nextEventTime } = useGetNextLotteryEvent(endTimeAsInt, data.status)
   const secondsRemaining = useNextEventCountdown(nextEventTime)
   const { days, hours, minutes, seconds } = getTimePeriods(secondsRemaining)
-  return <Timer wrapperClassName="custom-timer" seconds={seconds} minutes={minutes} hours={hours} days={days} />
+  if (isLotteryLive(data.status))
+    return <Timer wrapperClassName="custom-timer" seconds={seconds} minutes={minutes} hours={hours} days={days} />
+  return null
 }
 
 const LotteryBanner = () => {
   const { t } = useTranslation()
   const { isDesktop } = useMatchBreakpoints()
+  const { data, status } = useSWR<LotteryResponse>(['currentLottery'])
+
   return (
     <S.Wrapper>
       <S.Inner>
         <S.LeftWrapper>
-          <StyledSubheading>
-            <LotteryPrice />
-          </StyledSubheading>
-          <TimerWrapper>
-            <LotteryCountDownTimer />
-          </TimerWrapper>
+          {status === FetchStatus.Fetched && isLotteryLive(data.status) ? (
+            <>
+              <StyledSubheading style={{ textShadow: '0px 4px 4px rgba(0, 0, 0, 0.25)' }}>
+                <LotteryPrice />
+              </StyledSubheading>
+              <TimerWrapper>
+                <LotteryCountDownTimer />
+              </TimerWrapper>
+            </>
+          ) : (
+            <>
+              <S.StyledSubheading>{t('Lottery')}</S.StyledSubheading>
+              <S.StyledHeading scale="xl">{t('Preparing')}</S.StyledHeading>
+            </>
+          )}
           <NextLinkFromReactRouter to="/lottery">
             <Button>
               <Text color="invertedContrast" bold fontSize="16px" mr="4px">
-                {t('Play Now')}
+                {status === FetchStatus.Fetched && isLotteryLive(data.status) ? t('Play Now') : t('Check Now')}
               </Text>
               <ArrowForwardIcon color="invertedContrast" />
             </Button>
@@ -113,7 +136,7 @@ const LotteryBanner = () => {
               className="mobile"
               src={lotteryMobileImage}
               alt="LotteryBanner"
-              width={215}
+              width={190}
               height={144}
               placeholder="blur"
             />
